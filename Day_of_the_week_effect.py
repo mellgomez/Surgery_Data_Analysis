@@ -61,7 +61,7 @@ print(f"Odds Ratio (per unit RSI): {np.exp(model1.coef_[0][0]):.4f}")
 # ============================================
 # MODEL 2: BASELINE + TEMPORAL + DEMOGRAPHICS
 # ============================================
-print("\n" + "="*80)
+print("="*80)
 print("MODEL 2: Baseline Risk + Day of Week + Demographics")
 print("="*80)
 
@@ -94,7 +94,7 @@ for name, coef in zip(feature_cols, model2.coef_[0]):
 late_week_coef = model2.coef_[0][feature_cols.index('late_week')]
 late_week_or = np.exp(late_week_coef)
 
-print("\n" + "="*80)
+print("="*80)
 print("H1: LATE WEEK MAIN EFFECT")
 print("="*80)
 print(f"Late Week Odds Ratio: {late_week_or:.4f}")
@@ -104,7 +104,7 @@ print("of 30-day mortality AFTER controlling for baseline patient risk")
 # ============================================
 # MODEL COMPARISON: Likelihood Ratio Test + AIC
 # ============================================
-print("\n" + "="*80)
+print("="*80)
 print("MODEL COMPARISON: Baseline vs Full Model")
 print("="*80)
 
@@ -116,11 +116,11 @@ ll_full = -log_loss(y_full, y_pred_full, normalize=False)
 k_baseline = X_baseline.shape[1] + 1  # 1 feature + intercept = 2
 k_full = len(feature_cols) + 1         # 6 features + intercept = 7
 
-# Calculate AIC (Akaike Information Criterion): lower = better
+# Calculate AIC : 
 aic_baseline = -2 * ll_baseline + 2 * k_baseline
 aic_full = -2 * ll_full + 2 * k_full
 
-# Calculate Deviance (lack of fit measure): lower = better
+# Calculate Deviance (lack of fit measure):
 deviance_baseline = -2 * ll_baseline
 deviance_full = -2 * ll_full
 
@@ -139,15 +139,15 @@ print(f"{'Deviance':<25} {deviance_baseline:<20.2f} {deviance_full:<20.2f} {devi
 print("\nLikelihood Ratio Test:")
 print(f"  χ² = {lr_stat:.2f}, df = {df_diff}, p = {p_value_lr:.4f}")
 if p_value_lr < 0.001:
-    print(f"  ✓ Model 2 is SIGNIFICANTLY better (p < 0.001)")
-    print(f"  → Adding temporal/demographic factors substantially improves fit")
+    print(f"  Model 2 is SIGNIFICANTLY better (p < 0.001)")
+    print(f"  Adding temporal/demographic factors substantially improves fit")
 else:
-    print(f"  → Model 2 improvement not significant")
+    print(f"  Model 2 improvement not significant")
 
 # ============================================
-# H2: FORMAL INTERACTION TEST (Day × Procedure Risk)
+# H2: FORMAL INTERACTION TEST (Day × Procedure Risk) with p-values
 # ============================================
-print("\n" + "="*80)
+print("="*80)
 print("H2: DAY OF WEEK × PROCEDURE RISK INTERACTION")
 print("="*80)
 print("Testing: Does the late-week effect differ for high-risk vs low-risk procedures?\n")
@@ -171,7 +171,7 @@ y_with_int = df.loc[X_with_int.index, 'mort30']
 model_with_int = LogisticRegression(class_weight='balanced', max_iter=1000, random_state=42)
 model_with_int.fit(X_with_int, y_with_int)
 
-# Get formal p-value using statsmodels (sklearn doesn't provide p-values)
+# Getting formal p-value using statsmodels cos sklearn doesn't provide p-values
 X_with_int_const = sm.add_constant(X_with_int)  # Add intercept column
 logit_model = sm.Logit(y_with_int, X_with_int_const)
 logit_result = logit_model.fit(disp=0)  # disp=0 suppresses convergence messages
@@ -204,15 +204,15 @@ print("INTERPRETATION:")
 print(f"{'='*80}")
 
 if interaction_pval < 0.05:
-    print(f"✓ SIGNIFICANT INTERACTION (p = {interaction_pval:.4f} {sig_marker})")
+    print(f"SIGNIFICANT INTERACTION (p = {interaction_pval:.4f} {sig_marker})")
     if interaction_or > 1:
-        print(f"  → High-risk procedures show {(interaction_or-1)*100:.1f}% GREATER late-week effect")
-        print(f"  → Timing matters MORE for complex surgeries")
+        print(f"  High-risk procedures show {(interaction_or-1)*100:.1f}% GREATER late-week effect")
+        print(f"  Timing matters MORE for complex surgeries")
     else:
-        print(f"  → High-risk procedures show {(1-interaction_or)*100:.1f}% SMALLER late-week effect")
+        print(f"  High-risk procedures show {(1-interaction_or)*100:.1f}% SMALLER late-week effect")
 else:
-    print(f"✗ NOT SIGNIFICANT (p = {interaction_pval:.4f})")
-    print(f"  → Cannot conclude differential effect by procedure type")
+    print(f"NOT SIGNIFICANT (p = {interaction_pval:.4f})")
+    print(f"  Cannot conclude differential effect by procedure type")
 
 # Likelihood Ratio Test comparing models with/without interaction
 ll_no_int = -log_loss(y_with_int, model_no_int.predict_proba(X_with_int[features_no_int])[:, 1], normalize=False)
@@ -234,7 +234,7 @@ print(f"  AUC with interaction:    {auc_with_int:.4f}")
 print(f"  Improvement:             {auc_with_int - auc_no_int:.4f}")
 
 # ============================================
-# DESCRIPTIVE STRATIFICATION (for report table)
+# PRINT SOME DESCRIPTIVE STATS
 # ============================================
 print("\n" + "="*80)
 print("DESCRIPTIVE: Mortality Rates by Day and Procedure Risk")
@@ -258,7 +258,7 @@ print(f"  Interaction: {(high_risk.loc[1, 'Mortality_Rate'] - high_risk.loc[0, '
 # ============================================
 # ESSENTIAL DIAGNOSTICS (Model 2 only)
 # ============================================
-print("\n" + "="*80)
+print("="*80)
 print("MODEL DIAGNOSTICS: Essential Checks for Model 2")
 print("="*80)
 
@@ -282,11 +282,11 @@ print(vif_data.to_string(index=False))
 
 max_vif = vif_data['VIF'].max()
 if max_vif < 5:
-    print(f"\n✓ PASS: Max VIF = {max_vif:.2f} < 5 (No problematic multicollinearity)")
+    print(f"\nPASS: Max VIF = {max_vif:.2f} < 5 (No problematic multicollinearity)")
 elif max_vif < 10:
-    print(f"\n⚠ CAUTION: Max VIF = {max_vif:.2f} (Moderate multicollinearity)")
+    print(f"\nCAUTION: Max VIF = {max_vif:.2f} (Moderate multicollinearity)")
 else:
-    print(f"\n⚠ FAIL: Max VIF = {max_vif:.2f} > 10 (Serious multicollinearity)")
+    print(f"\nFAIL: Max VIF = {max_vif:.2f} > 10 (Serious multicollinearity)")
 
 # ---- DIAGNOSTIC 2: Model Fit (Hosmer-Lemeshow) ----
 print("\n" + "-"*80)
@@ -318,9 +318,9 @@ p_value_hl = 1 - chi2.cdf(hl_stat, df_hl)
 print(f"χ² = {hl_stat:.2f}, df = {df_hl}, p = {p_value_hl:.4f}")
 
 if p_value_hl > 0.05:
-    print(f"✓ PASS: Good fit (p = {p_value_hl:.4f} > 0.05)")
+    print(f"PASS: Good fit (p = {p_value_hl:.4f} > 0.05)")
 else:
-    print(f"⚠ FAIL: Poor fit (p = {p_value_hl:.4f} < 0.05)")
+    print(f"FAIL: Poor fit (p = {p_value_hl:.4f} < 0.05)")
     print("Note: With 32K observations and extreme imbalance, test is overly sensitive")
     print("      Model discrimination (AUC=0.908) remains excellent for inference")
 
@@ -339,47 +339,10 @@ print(f"Mean:         {cooks_d.mean():.6f}")
 
 n_influential = (cooks_d > 1.0).sum()
 if n_influential == 0:
-    print(f"\n✓ PASS: No influential outliers (all Cook's D < 1.0)")
+    print(f"\nPASS: No influential outliers (all Cook's D < 1.0)")
     print(f"        Model coefficients are stable")
 else:
-    print(f"\n⚠ WARNING: {n_influential} observations have Cook's D > 1.0")
-
-# ---- SUMMARY ----
-print("\n" + "="*80)
-print("DIAGNOSTIC SUMMARY")
-print("="*80)
-
-checks_passed = []
-checks_failed = []
-
-if max_vif < 5:
-    checks_passed.append("✓ No multicollinearity")
-else:
-    checks_failed.append(f"⚠ Multicollinearity (VIF={max_vif:.2f})")
-
-if p_value_hl > 0.05:
-    checks_passed.append("✓ Good model fit")
-else:
-    checks_failed.append("⚠ Poor H-L fit (acceptable given sample size/imbalance)")
-
-if n_influential == 0:
-    checks_passed.append("✓ No influential outliers")
-else:
-    checks_failed.append(f"⚠ {n_influential} influential outliers")
-
-print("\nPassed:")
-for item in checks_passed:
-    print(f"  {item}")
-
-if checks_failed:
-    print("\nConcerns:")
-    for item in checks_failed:
-        print(f"  {item}")
-
-print("\n" + "="*80)
-print("ANALYSIS COMPLETE")
-print("="*80)
-
+    print(f"\nWARNING: {n_influential} observations have Cook's D > 1.0")
 
 
 

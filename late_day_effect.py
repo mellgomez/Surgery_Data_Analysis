@@ -15,27 +15,21 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 df = pd.read_excel('SurgeryTiming.xlsx')
 
 # ============================================
-# STEP 1: CREATE TIME-OF-DAY CATEGORIES
+# TIME-OF-DAY CATEGORIES
 # ============================================
 
 print("="*80)
 print("TIME-OF-DAY ANALYSIS: INTRA-DAY FATIGUE EFFECTS")
-print("="*80)
+
 
 # Check hour distribution first
 print("\nHour distribution:")
 print(df['hour'].describe())
 print(f"Unique hour values: {df['hour'].nunique()}")
 
-# Create time-of-day categories based on clinical shifts
+# Bin continuous hours into clinically meaningful periods.
 def categorize_time(hour):
-    """
-    Bin continuous hours into clinically meaningful periods.
-    
-    Morning (6-12): Start of day, peak performance
-    Afternoon (12-16): Post-lunch, moderate fatigue  
-    Evening (16-19): End of day, peak fatigue
-    """
+   
     if pd.isna(hour):
         return np.nan
     elif hour < 12:
@@ -48,9 +42,9 @@ def categorize_time(hour):
 df['time_category'] = df['hour'].apply(categorize_time)
 
 # Check distribution
-print("\n" + "="*80)
-print("TIME CATEGORY DISTRIBUTION")
 print("="*80)
+print("TIME CATEGORY DISTRIBUTION")
+
 
 time_dist = df.groupby('time_category').agg({
     'mort30': ['count', 'sum', 'mean']
@@ -76,10 +70,10 @@ df['bmi_imputed'] = df['bmi'].fillna(df['bmi'].median())
 df['asa_imputed'] = df['asa_status'].fillna(df['asa_status'].median())
 
 # ============================================
-# STEP 2: DESCRIPTIVE ANALYSIS
+# SOME DESCRIPTIVE ANALYSIS BEFORE MODELING
 # ============================================
 
-print("\n" + "="*80)
+print("="*80)
 print("DESCRIPTIVE: MORTALITY BY TIME AND RISK")
 print("="*80)
 
@@ -87,7 +81,7 @@ print("="*80)
 print("\nMortality by Time of Day:")
 print(df.groupby('time_category')['mort30'].agg(['mean', 'count', 'sum']))
 
-# Mortality by time × procedure risk
+# Mortality by time × procedure risk 
 print("\nMortality by Time of Day × Procedure Risk:")
 time_risk = df.groupby(['time_category', 'high_risk_proc']).agg({
     'mort30': ['mean', 'count', 'sum']
@@ -96,7 +90,7 @@ time_risk.columns = ['Mortality_Rate', 'N', 'Deaths']
 print(time_risk)
 
 # Triple: day × time × procedure
-print("\nMortality by Day × Time × Procedure Risk (Key Combinations):")
+print("\nMortality by Day × Time × Procedure Risk:")
 triple = df.groupby(['late_week', 'time_category', 'high_risk_proc']).agg({
     'mort30': ['mean', 'count', 'sum']
 }).round(4)
@@ -104,7 +98,7 @@ triple.columns = ['Mortality_Rate', 'N', 'Deaths']
 print(triple)
 
 # ============================================
-# STEP 3: MODEL 1 - TIME MAIN EFFECT
+# MODEL 1: TIME MAIN EFFECT
 # ============================================
 
 print("\n" + "="*80)
@@ -151,10 +145,10 @@ for i, var in enumerate(model1_features):
     print(f"{var:<25} {or_val:<12.4f} {interp:<40}{marker}")
 
 # ============================================
-# STEP 4: MODEL 2 - TIME × PROCEDURE INTERACTION
+# MODEL 2: TIME × PROCEDURE INTERACTION
 # ============================================
 
-print("\n" + "="*80)
+print("="*80)
 print("MODEL 2: TIME × PROCEDURE RISK INTERACTION")
 print("="*80)
 
@@ -199,22 +193,15 @@ print("*"*80)
 print(f"Afternoon × High-Risk: OR = {afternoon_int_or:.4f}")
 print(f"Evening × High-Risk:   OR = {evening_int_or:.4f}")
 
-if evening_int_or > 1.2:
-    print("\n✓ FINDING: High-risk procedures show GREATER evening effect")
-elif evening_int_or < 0.8:
-    print("\n→ High-risk procedures show SMALLER evening effect")
-else:
-    print("\n→ No significant interaction")
-
 
 # ============================================
-# DIAGNOSTICS: Time × Procedure Model
+# MODEL DIAGNOSTICS: TIME × PROCEDURE INTERACTION
 # ============================================
-print("\n" + "="*80)
+print("="*80)
 print("MODEL DIAGNOSTICS: Time × Procedure Interaction Model")
 print("="*80)
 
-# Fit with statsmodels for diagnostics
+# Have to fir the model with statsmodels for diagnostics
 X_model2_const = sm.add_constant(X_model2)
 logit_time_model = sm.Logit(y_model2, X_model2_const)
 logit_time_result = logit_time_model.fit(disp=0)
@@ -229,9 +216,9 @@ print(vif_time.to_string(index=False))
 
 max_vif_time = vif_time['VIF'].max()
 if max_vif_time < 5:
-    print(f"✓ PASS: Max VIF = {max_vif_time:.2f} < 5")
+    print(f"PASS: Max VIF = {max_vif_time:.2f} < 5")
 else:
-    print(f"⚠ CAUTION: Max VIF = {max_vif_time:.2f}")
+    print(f"CAUTION: Max VIF = {max_vif_time:.2f}")
 
 # ---- Hosmer-Lemeshow ----
 print("\n2. Model Fit (Hosmer-Lemeshow):")
@@ -253,9 +240,9 @@ p_hl_time = 1 - stats.chi2.cdf(hl_stat_time, df_hl_time)
 
 print(f"χ² = {hl_stat_time:.2f}, df = {df_hl_time}, p = {p_hl_time:.4f}")
 if p_hl_time > 0.05:
-    print(f"✓ PASS: Good fit (p > 0.05)")
+    print(f"PASS: Good fit (p > 0.05)")
 else:
-    print(f"⚠ FAIL: p = {p_hl_time:.4f} < 0.05 (acceptable given sample size)")
+    print(f"FAIL: p = {p_hl_time:.4f} < 0.05 (acceptable given sample size)")
 
 # ---- Cook's Distance ----
 print("\n3. Influential Outliers (Cook's Distance):")
@@ -266,22 +253,18 @@ print(f"Max Cook's D: {cooks_time.max():.6f}")
 n_influential_time = (cooks_time > 1.0).sum()
 
 if n_influential_time == 0:
-    print(f"✓ PASS: No influential outliers")
+    print(f"PASS: No influential outliers")
 else:
-    print(f"⚠ WARNING: {n_influential_time} outliers")
+    print(f"WARNING: {n_influential_time} outliers")
 
-print("\nDiagnostic Summary: Time Model")
-print(f"  VIF: {'✓' if max_vif_time < 5 else '⚠'}")
-print(f"  Fit: {'✓' if p_hl_time > 0.05 else '⚠'}")
-print(f"  Outliers: {'✓' if n_influential_time == 0 else '⚠'}")
+
 
 
 
 # ============================================
-# VISUALIZATION PROPORTIONS: Time × Procedure Interaction
+# VISUALIsATION PROPORTIONS: Time × Procedure Interaction (to show the model above visually)
 # ============================================
 
-print("\nCreating Time × Procedure interaction plot...")
 
 # Calculate mortality rates by time category and procedure risk
 time_interaction_data = df.groupby(['time_category', 'high_risk_proc']).agg({
@@ -350,102 +333,10 @@ ax.spines['right'].set_visible(False)
 
 plt.tight_layout()
 plt.savefig('time_procedure_interaction.png', dpi=300, bbox_inches='tight')
-print("✓ Saved: time_procedure_interaction.png")
+print("Saved: time_procedure_interaction.png")
 plt.show()
 
 
 
-# ============================================
-# STEP 6: VISUALISATION
-# ============================================
 
-# print("\n" + "="*80)
-# print("GENERATING VISUALIZATIONS")
-# print("="*80)
-
-# # Create stratified plot: Time × Procedure Risk
-# fig, ax = plt.subplots(figsize=(10, 6))
-
-# # Calculate mortality rates
-# plot_data = df.groupby(['time_category', 'high_risk_proc']).agg({
-#     'mort30': ['mean', 'count']
-# }).reset_index()
-# plot_data.columns = ['time_category', 'high_risk_proc', 'mort_rate', 'n']
-# plot_data['sem'] = np.sqrt(plot_data['mort_rate'] * (1 - plot_data['mort_rate']) / plot_data['n'])
-
-# # Order time categories
-# time_order = ['Morning', 'Afternoon', 'Evening']
-# plot_data['time_category'] = pd.Categorical(plot_data['time_category'], categories=time_order, ordered=True)
-# plot_data = plot_data.sort_values('time_category')
-
-# # Separate by risk
-# low_risk = plot_data[plot_data['high_risk_proc'] == 0]
-# high_risk = plot_data[plot_data['high_risk_proc'] == 1]
-
-# # Plot
-# x = np.arange(len(time_order))
-# width = 0.35
-
-# bars1 = ax.bar(x - width/2, low_risk['mort_rate']*100, width,
-#                yerr=low_risk['sem']*100, label='Low Risk', 
-#                capsize=5, alpha=0.8, color='steelblue')
-
-# bars2 = ax.bar(x + width/2, high_risk['mort_rate']*100, width,
-#                yerr=high_risk['sem']*100, label='High Risk',
-#                capsize=5, alpha=0.8, color='indianred')
-
-# ax.set_xlabel('Time of Day', fontsize=12, fontweight='bold')
-# ax.set_ylabel('30-Day Mortality Rate (%)', fontsize=12, fontweight='bold')
-# ax.set_title('Mortality Rate by Time of Day and Procedure Risk', fontsize=14, fontweight='bold')
-# ax.set_xticks(x)
-# ax.set_xticklabels(time_order)
-# ax.legend()
-# ax.grid(axis='y', alpha=0.3)
-
-# plt.tight_layout()
-# plt.savefig('time_of_day_mortality.png', dpi=300, bbox_inches='tight')
-# print("✓ Saved: time_of_day_mortality.png")
-# plt.show()
-
-# # ============================================
-# # STEP 7: "DANGER ZONE" HEATMAP (NOVEL)
-# # ============================================
-
-# print("\nCreating 'Danger Zone' heatmap...")
-
-# # Calculate mortality rates for all combinations
-# heatmap_data = df.groupby(['late_week', 'time_category', 'high_risk_proc']).agg({
-#     'mort30': ['mean', 'count']
-# }).reset_index()
-# heatmap_data.columns = ['late_week', 'time_category', 'high_risk_proc', 'mort_rate', 'n']
-
-# # Create separate heatmaps for low and high risk
-# fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
-# for idx, (risk_level, risk_label) in enumerate([(0, 'Low Risk'), (1, 'High Risk')]):
-#     subset = heatmap_data[heatmap_data['high_risk_proc'] == risk_level]
-    
-#     # Pivot for heatmap
-#     pivot = subset.pivot_table(values='mort_rate', 
-#                                 index='time_category', 
-#                                 columns='late_week',
-#                                 aggfunc='mean')
-    
-#     # Reorder rows
-#     pivot = pivot.reindex(['Morning', 'Afternoon', 'Evening'])
-    
-#     # Plot
-#     sns.heatmap(pivot * 100, annot=True, fmt='.2f', cmap='YlOrRd',
-#                 ax=axes[idx], vmin=0, vmax=2,
-#                 cbar_kws={'label': 'Mortality Rate (%)'})
-    
-#     axes[idx].set_title(f'{risk_label} Procedures', fontsize=12, fontweight='bold')
-#     axes[idx].set_xlabel('Day of Week (0=Mon-Wed, 1=Thu-Fri)')
-#     axes[idx].set_ylabel('Time of Day')
-
-# plt.suptitle('Mortality "Danger Zone" Map', fontsize=14, fontweight='bold')
-# plt.tight_layout()
-# plt.savefig('danger_zone_heatmap.png', dpi=300, bbox_inches='tight')
-# print("✓ Saved: danger_zone_heatmap.png")
-# plt.show()
 

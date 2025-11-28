@@ -6,6 +6,8 @@
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Load and inspect
 df = pd.read_excel('SurgeryTiming.xlsx')
@@ -99,9 +101,8 @@ print("\nHour distribution:")
 print(df['hour'].describe())
 print(df.groupby('hour')['mort30'].mean())
 
-# Visualizations
-import matplotlib.pyplot as plt
-import seaborn as sns
+# VisualiSations
+
 
 fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
@@ -168,7 +169,7 @@ asa_by_dow = [df[df['dow']==d]['asa_status'].dropna() for d in df['dow'].unique(
 f_stat, p_val = stats.f_oneway(*asa_by_dow)
 print(f"\nASA status differs by dow? F={f_stat:.3f}, p={p_val:.4f}")
 
-# Visualize
+# VisualiSe
 fig, axes = plt.subplots(2, 3, figsize=(15, 10))
 vars_to_plot = ['age', 'asa_status', 'bmi', 'baseline_charlson', 'mortality_rsi', 'baseline_cvd']
 
